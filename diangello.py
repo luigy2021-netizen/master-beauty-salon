@@ -17,6 +17,6 @@ def get_sheet():
     return sheet
 
 # ── Header ────────────────────────────────────────────────────────────────────
-st.image("diangelo.png", width=700)
+st.image("diangelo.png", width=700, use_container_width=true)
 st.title("Di'Angello Legend")
 st.sub
