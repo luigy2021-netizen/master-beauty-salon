@@ -40,4 +40,15 @@ if st.button("✅ Confirmar cita"):
             registros = sheet.get_all_values()
             horario_ocupado = any(len(r) >= 6 and str(fecha) in r[4] and hora in r[5] for r in registros[1:])
             if horario_ocupado:
-                st.error(
+                st.error(f"⚠️ El horario {hora} del {fecha} ya está ocupado.")
+            else:
+                sheet.append_row([datetime.now().strftime("%d/%m/%Y %H:%M"), nombre, telefono, servicio, str(fecha), hora, notas])
+                st.success(f"¡Cita confirmada, {nombre}! Te esperamos el {fecha} a las {hora} ✅")
+                st.info("📱 Te contactaremos al WhatsApp para confirmar.")
+        except Exception as e:
+            st.error(f"Error: {e}")
+    else:
+        st.error("⚠️ Por favor llena tu nombre y WhatsApp")
+
+st.write("---")
+st.caption("Di'Angello Legend ©️ 2026")
