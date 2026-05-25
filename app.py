@@ -20,12 +20,12 @@ def get_sheet():
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    # Buscamos el archivo de credenciales que ya tienes en tu carpeta
-    creds = Credentials.from_service_account_file("credenciales.json", scopes=scopes)
-    client = gspread.authorize(creds)
-    # Abre la hoja que creamos en tu Drive
-    sheet = client.open("Citas_DiAngello").sheet1
-    return sheet
+   # Buscamos el archivo de credenciales que ya tienes en tu carpeta
+   creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+   client = gspread.authorize(creds)
+   # Abre la hoja que creamos en tu Drive
+   sheet = client.open("Citas_DiAngello").sheet1
+   return sheet
 
 # 2. Encabezado principal
 st.image("https://raw.githubusercontent.com/luigy2021-netizen/diangello-legend/main/diangello.png" , width=200)
