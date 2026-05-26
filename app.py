@@ -65,10 +65,23 @@ with st.form("formulario_cita", clear_on_submit=True):
     
     boton_agendar = st.form_submit_button("Agendar Cita")
 
-# 6. Lógica de registro al presionar el botón
 if boton_agendar:
-    if not nombre or not whatsapp or len(whatsapp) < 10:
-        st.error("⚠️ Por favor, llena los campos obligatorios. El WhatsApp debe tener 10 dígitos.")
+
+    nombre = nombre.strip()
+    whatsapp = whatsapp.strip()
+
+    # dejar solo números
+    whatsapp = "".join(filter(str.isdigit, whatsapp))
+
+    if not nombre:
+        st.error("⚠️ Escribe tu nombre completo.")
+
+    elif not whatsapp.isdigit():
+        st.error("⚠️ El WhatsApp debe contener solo números.")
+
+    elif len(whatsapp) != 10:
+        st.error("⚠️ El WhatsApp debe tener exactamente 10 dígitos.")
+
     else:
         try:
             precio_final = SERVICIOS[servicio_seleccionado]
