@@ -76,18 +76,14 @@ if st.button("Agendar cita"):
 
     else:
         try:
-            sheet = get_sheet()
-
-            sheet.append_row([
-                datetime.now().strftime("%Y%m%d%H%M%S"),
-                nombre,
-                whatsapp,
-                servicio,
-                str(fecha),
-                hora
-            ])
-
-            st.success("✅ Cita guardada correctamente")
+sheet.append_row([
+    datetime.now().strftime("%Y%m%d%H%M%S"),
+    nombre,
+    whatsapp,
+    servicio,
+    str(fecha),
+    hora,
+    notas
 
         except Exception as e:
             st.error(f"Error: {e}")
