@@ -32,62 +32,28 @@ st.image(
 
 st.title("Di'Angello Legend ✂️")
 
-nombre = st.text_input("Nombre completo")
+with st.form("formulario_cita"):
+    nombre = st.text_input("Nombre completo")
+    whatsapp = st.text_input("WhatsApp (10 dígitos)", max_chars=10)
+    servicio = st.selectbox("Servicio", ["Corte Caballero", "Corte Dama", "Tinte Completo", "Mechas / Highlights", "Corte + Tinte Caballero"])
+    fecha = st.date_input("Fecha", min_value=date.today())
+    hora = st.selectbox("Hora", ["09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", "01:00 PM", "03:00 PM", "04:00 PM", "05:00 PM", "06:00 PM"])
+    notas = st.text_area("Comentarios adicionales")
+    enviar = st.form_submit_button("Agendar cita")
 
-whatsapp = st.text_input(
-    "WhatsApp (10 dígitos)",
-    max_chars=10
-)
+if enviar:
+    nombre = nombre.strip()
+    whatsapp = whatsapp.strip()
 
-servicio = st.selectbox(
-    "Servicio",
-    [
-        "Corte Caballero",
-        "Corte Dama",
-        "Tinte Completo",
-        "Mechas / Highlights",
-        "Corte + Tinte Caballero"
-    ]
-)
-
-fecha = st.date_input(
-    "Fecha",
-    min_value=date.today()
-)
-
-hora = st.selectbox(
-    "Hora",
-    [
-        "09:00 AM",
-        "10:00 AM",
-        "11:00 AM",
-        "12:00 PM",
-        "01:00 PM",
-        "03:00 PM",
-        "04:00 PM",
-        "05:00 PM",
-        "06:00 PM"
-    ]
-)
-
-notas = st.text_area("Comentarios adicionales")
-
-if st.button("Agendar cita"):
-
-    if nombre == "":
+    if not nombre:
         st.error("Escribe tu nombre")
-
     elif len(whatsapp) != 10:
         st.error(f"WhatsApp debe tener 10 dígitos. Tiene {len(whatsapp)}")
-
     elif not dia_valido(fecha):
         st.error("Di’Angello no trabaja domingos ni lunes")
-
     else:
         try:
-
             sheet = get_sheet()
-
             sheet.append_row([
                 datetime.now().strftime("%Y%m%d%H%M%S"),
                 nombre,
@@ -97,9 +63,6 @@ if st.button("Agendar cita"):
                 hora,
                 notas
             ])
-
             st.success("✅ Cita guardada correctamente")
-
         except Exception as e:
-
             st.error(f"Error: {e}")
