@@ -1,180 +1,519 @@
-import streamlit as st
+from datetime import date, datetime, time, timedelta
+from html import escape
+from pathlib import Path
+from urllib.parse import quote_plus
+
 import gspread
-from datetime import datetime, date, time, timedelta
-from google.oauth2.service_account import Credentials
+import pandas as pd
+import streamlit as st
+from oauth2client.service_account import ServiceAccountCredentials
 
-st.set_page_config(page_title="Di'Angello Legend", page_icon="✂️")
-
-SHEET_ID = "1N3QAuNXO0EckAOk5lb6ULmbk4nvs654dDJln-huHC1Q"
 
 SERVICIOS = {
-    "Corte Caballero": 30,
-    "Corte Dama": 60,
-    "Tinte Completo": 120,
-    "Mechas / Highlights": 120,
-    "Corte + Tinte Caballero": 90
+    "Corte caballero": {
+        "duracion": 30,
+        "descripcion": "Corte personalizado y acabado profesional.",
+    },
+    "Corte mujer": {
+        "duracion": 60,
+        "descripcion": "Diseño de corte adaptado a tu estilo.",
+    },
+    "Tinte": {
+        "duracion": 120,
+        "descripcion": "Servicio de color con atención dedicada.",
+    },
 }
+
+PROMOCION_PRINCIPAL = {
+    "etiqueta": "Promoción destacada",
+    "titulo": "Renueva tu estilo en Master Beauty Salon",
+    "detalle": "Pregunta por nuestros paquetes y promociones disponibles al reservar.",
+}
+
+PROMOCIONES = [
+    {
+        "titulo": "Experiencia Master",
+        "detalle": "Combina tus servicios favoritos en una sola visita.",
+    },
+    {
+        "titulo": "Color y cuidado",
+        "detalle": "Consulta las opciones disponibles para renovar tu color.",
+    },
+    {
+        "titulo": "Tu próxima visita",
+        "detalle": "Agenda con anticipación y elige el horario que más te convenga.",
+    },
+]
+
+KRONIQ_WHATSAPP = "526563079754"
+KRONIQ_MENSAJE = "Hola, quiero información sobre una agenda digital para mi negocio."
 
 HORA_APERTURA = time(10, 0)
 HORA_CIERRE = time(17, 30)
 COMIDA_INICIO = time(14, 0)
 COMIDA_FIN = time(15, 0)
+INTERVALO_MINUTOS = 30
+COLUMNAS = [
+    "Fecha",
+    "Hora",
+    "Servicio",
+    "Duración",
+    "Nombre",
+    "WhatsApp",
+    "Estado",
+]
 
-def get_sheet():
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = Credentials.from_service_account_info(
-        dict(st.secrets["gcp_service_account"]),
-        scopes=scopes
-    )
-    client = gspread.authorize(creds)
-    return client.open_by_key(SHEET_ID).sheet1
+MARCA = "Master Beauty Salon"
+LOGO = Path(__file__).parent / "assets" / "master-beauty-salon.png"
 
-def dia_valido(fecha):
-    return fecha.weekday() not in [0, 6]
-
-def se_empalma(inicio1, fin1, inicio2, fin2):
-    return inicio1 < fin2 and inicio2 < fin1
-
-def formato_hora(dt):
-    return dt.strftime("%I:%M %p")
-
-def obtener_citas_del_dia(fecha):
-    sheet = get_sheet()
-    filas = sheet.get_all_values()
-    citas = []
-
-    for fila in filas[1:]:
-        try:
-            if len(fila) < 7:
-                continue
-
-            servicio = fila[3]
-            duracion = int(fila[4])
-            fecha_cita = fila[5]
-            hora_cita = fila[6]
-
-            if fecha_cita != str(fecha):
-                continue
-
-            inicio = datetime.strptime(
-                f"{fecha_cita} {hora_cita}",
-                "%Y-%m-%d %I:%M %p"
-            )
-            fin = inicio + timedelta(minutes=duracion)
-
-            citas.append((inicio, fin))
-
-        except:
-            continue
-
-    return citas
-
-def horarios_disponibles(fecha, duracion):
-    if not dia_valido(fecha):
-        return []
-
-    citas = obtener_citas_del_dia(fecha)
-    disponibles = []
-
-    inicio_dia = datetime.combine(fecha, HORA_APERTURA)
-    cierre_dia = datetime.combine(fecha, HORA_CIERRE)
-    comida_inicio = datetime.combine(fecha, COMIDA_INICIO)
-    comida_fin = datetime.combine(fecha, COMIDA_FIN)
-
-    actual = inicio_dia
-
-    while actual < cierre_dia:
-        fin_servicio = actual + timedelta(minutes=duracion)
-
-        if fin_servicio <= cierre_dia:
-            choca_comida = se_empalma(
-                actual,
-                fin_servicio,
-                comida_inicio,
-                comida_fin
-            )
-
-            choca_cita = any(
-                se_empalma(actual, fin_servicio, cita_inicio, cita_fin)
-                for cita_inicio, cita_fin in citas
-            )
-
-            if not choca_comida and not choca_cita:
-                disponibles.append(formato_hora(actual))
-
-        actual += timedelta(minutes=30)
-
-    return disponibles
-
-st.image(
-    "https://raw.githubusercontent.com/luigy2021-netizen/diangello-legend/main/diangello.png",
-    width=180
+st.set_page_config(
+    page_title=f"Agenda | {MARCA}",
+    page_icon="✨",
+    layout="centered",
 )
 
-st.title("Di'Angello Legend ✂️")
-st.write("Agenda tu cita de forma rápida y sencilla.")
+st.markdown(
+    """
+    <style>
+        :root {
+            --master-gold: #d6a93f;
+            --master-gold-light: #f6dc8b;
+            --master-black: #090909;
+        }
 
-st.markdown("### Servicios y duración")
-for servicio, duracion in SERVICIOS.items():
-    if duracion < 60:
-        texto = f"{duracion} min"
-    elif duracion == 60:
-        texto = "1 hr"
-    else:
-        texto = f"{duracion // 60} hrs"
-    st.write(f"• {servicio}: {texto}")
+        .stApp {
+            background:
+                radial-gradient(circle at 50% 0%, #29200f 0, #111 30%, #050505 72%);
+            color: #f7f2e7;
+        }
 
-st.markdown("---")
+        [data-testid="stHeader"] {
+            background: transparent;
+        }
 
-servicio = st.selectbox("Servicio", list(SERVICIOS.keys()))
-duracion = SERVICIOS[servicio]
+        #MainMenu, footer, [data-testid="stToolbar"], .stDeployButton {
+            display: none !important;
+        }
 
-fecha = st.date_input("Fecha", min_value=date.today())
+        [data-testid="stAppViewBlockContainer"] {
+            max-width: 860px;
+            padding-top: 1rem;
+            padding-bottom: 3rem;
+        }
 
-if not dia_valido(fecha):
-    st.error("Di’Angello no trabaja domingos ni lunes. Selecciona otro día.")
-    st.stop()
+        [data-testid="stImage"] img {
+            display: block;
+            width: min(100%, 430px);
+            margin: 0 auto 0.35rem;
+            border-radius: 18px;
+            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        }
 
-horas = horarios_disponibles(fecha, duracion)
+        .master-heading,
+        .master-subheading {
+            text-align: center;
+        }
 
-if not horas:
-    st.warning("No hay horarios disponibles para ese servicio en esta fecha.")
-    st.stop()
+        .master-heading {
+            margin: 0.35rem 0 0;
+            color: var(--master-gold-light);
+            font-family: Georgia, serif;
+            font-size: clamp(1.65rem, 5vw, 2.35rem);
+            letter-spacing: 0.08em;
+        }
 
-with st.form("formulario_cita", clear_on_submit=True):
-    nombre = st.text_input("Nombre completo")
-    whatsapp = st.text_input("WhatsApp (10 dígitos)", max_chars=10)
-    hora = st.selectbox("Hora disponible", horas)
-    notas = st.text_area("Comentarios adicionales")
-    enviar = st.form_submit_button("Agendar cita")
+        .master-subheading {
+            margin: 0.35rem 0 2rem;
+            color: #cfc7b5;
+            letter-spacing: 0.04em;
+        }
 
-if enviar:
-    nombre = nombre.strip()
-    whatsapp = whatsapp.strip()
+        .promo-banner {
+            position: relative;
+            overflow: hidden;
+            margin: 0 0 1.4rem;
+            padding: 1.25rem 1.35rem;
+            border: 1px solid rgba(246, 220, 139, 0.62);
+            border-radius: 18px;
+            background:
+                linear-gradient(120deg, rgba(214, 169, 63, 0.25), transparent 60%),
+                #111;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        }
 
-    if not nombre:
-        st.error("Escribe tu nombre.")
-    elif len(whatsapp) != 10 or not whatsapp.isdigit():
-        st.error("El WhatsApp debe tener exactamente 10 dígitos.")
-    elif hora not in horarios_disponibles(fecha, duracion):
-        st.error("Ese horario acaba de ocuparse. Elige otro.")
-    else:
+        .promo-banner::after {
+            content: "M";
+            position: absolute;
+            right: 1rem;
+            top: -1.1rem;
+            color: rgba(246, 220, 139, 0.09);
+            font-family: Georgia, serif;
+            font-size: 8rem;
+            line-height: 1;
+        }
+
+        .promo-label {
+            color: var(--master-gold-light);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .promo-banner h2 {
+            position: relative;
+            z-index: 1;
+            margin: 0.35rem 0;
+            color: #fff4d4;
+            font-family: Georgia, serif;
+            font-size: 1.4rem;
+        }
+
+        .promo-banner p {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            max-width: 620px;
+            color: #d8d0c0;
+        }
+
+        .service-card, .promotion-card {
+            height: 100%;
+            padding: 1rem;
+            border: 1px solid rgba(214, 169, 63, 0.35);
+            border-radius: 14px;
+            background: rgba(17, 17, 17, 0.78);
+        }
+
+        .service-card strong, .promotion-card strong {
+            color: var(--master-gold-light);
+        }
+
+        .service-card p, .promotion-card p {
+            margin: 0.35rem 0 0;
+            color: #cfc7b5;
+            font-size: 0.9rem;
+        }
+
+        .service-time {
+            display: inline-block;
+            margin-top: 0.7rem;
+            color: #a99d86;
+            font-size: 0.78rem;
+        }
+
+        div[data-testid="stForm"] {
+            border-color: rgba(214, 169, 63, 0.5);
+            background: rgba(17, 17, 17, 0.82);
+        }
+
+        .stButton > button,
+        .stFormSubmitButton > button {
+            border: 1px solid var(--master-gold);
+            background: linear-gradient(135deg, #b88322, #f0d379);
+            color: var(--master-black);
+            font-weight: 700;
+        }
+
+        .stButton > button:hover,
+        .stFormSubmitButton > button:hover {
+            border-color: var(--master-gold-light);
+            color: #000;
+        }
+
+        .kroniq-footer {
+            margin-top: 2.8rem;
+            padding: 1.15rem;
+            border-top: 1px solid rgba(214, 169, 63, 0.32);
+            color: #aaa08e;
+            text-align: center;
+        }
+
+        .kroniq-footer strong {
+            color: var(--master-gold-light);
+        }
+
+        .kroniq-button {
+            display: inline-block;
+            margin-top: 0.8rem;
+            padding: 0.62rem 1rem;
+            border: 1px solid var(--master-gold);
+            border-radius: 10px;
+            color: #f4d982 !important;
+            font-weight: 700;
+            text-decoration: none !important;
+        }
+
+        .kroniq-button:hover {
+            background: rgba(214, 169, 63, 0.14);
+        }
+
+        @media (max-width: 640px) {
+            [data-testid="stAppViewBlockContainer"] {
+                padding: 0.7rem 0.8rem 2rem;
+            }
+
+            .promo-banner {
+                padding: 1rem;
+            }
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
+@st.cache_resource
+def obtener_hoja():
+    """Conecta con Google Sheets usando las credenciales de Streamlit Secrets."""
+    scopes = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    credenciales = ServiceAccountCredentials.from_json_keyfile_dict(
+        dict(st.secrets["gcp_service_account"]), scopes
+    )
+    cliente = gspread.authorize(credenciales)
+    libro = cliente.open(st.secrets["spreadsheet_name"])
+    nombre_hoja = st.secrets.get("worksheet_name", "Citas")
+    try:
+        hoja = libro.worksheet(nombre_hoja)
+    except gspread.WorksheetNotFound:
+        hoja = libro.add_worksheet(title=nombre_hoja, rows=1000, cols=7)
+
+    encabezados = hoja.row_values(1)
+    if not encabezados:
+        hoja.append_row(COLUMNAS)
+    elif encabezados != COLUMNAS:
+        raise ValueError(
+            "La primera fila de Google Sheets debe contener exactamente: "
+            + ", ".join(COLUMNAS)
+        )
+    return hoja
+
+
+def leer_citas(hoja) -> pd.DataFrame:
+    registros = hoja.get_all_records(expected_headers=COLUMNAS)
+    return pd.DataFrame(registros, columns=COLUMNAS)
+
+
+def se_empalman(inicio_a, fin_a, inicio_b, fin_b) -> bool:
+    return inicio_a < fin_b and inicio_b < fin_a
+
+
+def citas_del_dia(citas: pd.DataFrame, fecha: date):
+    if citas.empty:
+        return []
+
+    fecha_texto = fecha.strftime("%Y-%m-%d")
+    resultado = []
+    for _, cita in citas.iterrows():
+        if str(cita["Fecha"]).strip() != fecha_texto:
+            continue
+        if str(cita["Estado"]).strip().lower() in {"cancelada", "cancelado"}:
+            continue
         try:
-            sheet = get_sheet()
-            sheet.append_row([
-                datetime.now().strftime("%Y%m%d%H%M%S"),
-                nombre,
-                whatsapp,
-                servicio,
-                duracion,
-                str(fecha),
-                hora,
-                "Pendiente",
-                notas
-            ])
-            st.success("✅ Cita guardada correctamente.")
-        except Exception as e:
-            st.error(f"Error: {e}")
+            inicio = datetime.combine(
+                fecha, datetime.strptime(str(cita["Hora"]).strip(), "%H:%M").time()
+            )
+            duracion = int(cita["Duración"])
+        except (TypeError, ValueError):
+            continue
+        resultado.append((inicio, inicio + timedelta(minutes=duracion)))
+    return resultado
+
+
+def horarios_disponibles(fecha: date, duracion: int, citas: pd.DataFrame):
+    if fecha.weekday() in (6, 0):  # domingo y lunes
+        return []
+
+    apertura = datetime.combine(fecha, HORA_APERTURA)
+    cierre = datetime.combine(fecha, HORA_CIERRE)
+    comida_inicio = datetime.combine(fecha, COMIDA_INICIO)
+    comida_fin = datetime.combine(fecha, COMIDA_FIN)
+    ocupadas = citas_del_dia(citas, fecha)
+
+    disponibles = []
+    inicio = apertura
+    while inicio + timedelta(minutes=duracion) <= cierre:
+        fin = inicio + timedelta(minutes=duracion)
+        toca_comida = se_empalman(inicio, fin, comida_inicio, comida_fin)
+        toca_cita = any(
+            se_empalman(inicio, fin, inicio_ocupado, fin_ocupado)
+            for inicio_ocupado, fin_ocupado in ocupadas
+        )
+        if not toca_comida and not toca_cita:
+            disponibles.append(inicio.strftime("%H:%M"))
+        inicio += timedelta(minutes=INTERVALO_MINUTOS)
+    return disponibles
+
+
+def guardar_cita(hoja, fecha, hora, servicio, duracion, nombre, whatsapp):
+    # Se vuelve a consultar justo antes de guardar para evitar usar datos obsoletos.
+    citas_actuales = leer_citas(hoja)
+    if hora not in horarios_disponibles(fecha, duracion, citas_actuales):
+        return False
+
+    hoja.append_row(
+        [
+            fecha.strftime("%Y-%m-%d"),
+            hora,
+            servicio,
+            duracion,
+            nombre.strip(),
+            whatsapp,
+            "Confirmada",
+        ],
+        value_input_option="RAW",
+    )
+    return True
+
+
+def render_encabezado():
+    st.image(str(LOGO), use_container_width=True)
+    st.markdown(
+        f'<h1 class="master-heading">Agenda {MARCA}</h1>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<p class="master-subheading">Reserva tu momento de belleza.</p>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+        <div class="promo-banner">
+            <div class="promo-label">{escape(PROMOCION_PRINCIPAL['etiqueta'])}</div>
+            <h2>{escape(PROMOCION_PRINCIPAL['titulo'])}</h2>
+            <p>{escape(PROMOCION_PRINCIPAL['detalle'])}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_catalogo():
+    st.markdown("### Nuestros servicios")
+    columnas = st.columns(len(SERVICIOS))
+    for columna, (nombre, datos) in zip(columnas, SERVICIOS.items()):
+        with columna:
+            st.markdown(
+                f"""
+                <div class="service-card">
+                    <strong>{escape(nombre)}</strong>
+                    <p>{escape(datos['descripcion'])}</p>
+                    <span class="service-time">Duración aproximada: {datos['duracion']} min</span>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+def render_promociones():
+    st.markdown("### Promociones y novedades")
+    st.caption("Este espacio puede actualizarse cada temporada sin modificar la agenda.")
+    for promocion in PROMOCIONES:
+        st.markdown(
+            f"""
+            <div class="promotion-card">
+                <strong>{escape(promocion['titulo'])}</strong>
+                <p>{escape(promocion['detalle'])}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        st.write("")
+
+
+def render_reserva(hoja, citas):
+    st.markdown('<div id="reservar"></div>', unsafe_allow_html=True)
+    st.markdown("### Reserva tu cita")
+    st.caption("Elige tu servicio, fecha y horario disponible.")
+
+    servicio = st.selectbox("1. Selecciona servicio", list(SERVICIOS))
+    duracion = SERVICIOS[servicio]["duracion"]
+    fecha = st.date_input("2. Selecciona fecha", min_value=date.today())
+
+    if fecha.weekday() in (6, 0):
+        st.warning(f"{MARCA} permanece cerrado los domingos y lunes.")
+        return
+
+    horarios = horarios_disponibles(fecha, duracion, citas)
+    if not horarios:
+        st.info("No hay horarios disponibles para ese servicio en esta fecha.")
+        return
+
+    with st.form("formulario_cita", clear_on_submit=True):
+        hora = st.selectbox("3. Selecciona hora disponible", horarios)
+        nombre = st.text_input("4. Escribe tu nombre")
+        whatsapp = st.text_input(
+            "5. Escribe tu WhatsApp (10 dígitos)", max_chars=10
+        )
+        confirmar = st.form_submit_button("6. Confirmar cita")
+
+    if confirmar:
+        if not nombre.strip():
+            st.error("Escribe tu nombre.")
+        elif not (whatsapp.isdigit() and len(whatsapp) == 10):
+            st.error("El WhatsApp debe contener exactamente 10 dígitos.")
+        else:
+            try:
+                guardada = guardar_cita(
+                    hoja, fecha, hora, servicio, duracion, nombre, whatsapp
+                )
+                if guardada:
+                    st.success(
+                        f"Cita confirmada para {nombre.strip()} el "
+                        f"{fecha.strftime('%d/%m/%Y')} a las {hora}."
+                    )
+                else:
+                    st.error(
+                        "Ese horario acaba de ser ocupado. Recarga la página y elige otro."
+                    )
+            except Exception as error:
+                st.error("No se pudo guardar la cita. Intenta nuevamente.")
+                st.exception(error)
+
+
+def render_kroniq():
+    enlace = (
+        f"https://wa.me/{KRONIQ_WHATSAPP}?text="
+        f"{quote_plus(KRONIQ_MENSAJE)}"
+    )
+    st.markdown(
+        f"""
+        <div class="kroniq-footer">
+            <div>Agenda digital desarrollada por <strong>Kroniq</strong></div>
+            <div>Convierte tus citas en una experiencia profesional.</div>
+            <a class="kroniq-button" href="{escape(enlace)}" target="_blank"
+               rel="noopener noreferrer">Quiero una agenda para mi negocio</a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def main():
+    render_encabezado()
+
+    try:
+        hoja = obtener_hoja()
+        citas = leer_citas(hoja)
+    except Exception as error:
+        st.error("No fue posible conectar con Google Sheets. Revisa los Secrets y permisos.")
+        st.exception(error)
+        render_kroniq()
+        st.stop()
+
+    reservar, promociones = st.tabs(["Reservar cita", "Promociones"])
+    with reservar:
+        render_catalogo()
+        st.divider()
+        render_reserva(hoja, citas)
+    with promociones:
+        render_promociones()
+
+    render_kroniq()
+
+
+if __name__ == "__main__":
+    main()
