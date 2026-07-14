@@ -66,6 +66,14 @@ COLUMNAS = [
 MARCA = "Master Beauty Salon"
 LOGO = Path(__file__).parent / "assets" / "master-beauty-salon.png"
 
+
+def normalizar_encabezados(encabezados):
+    equivalencias = {
+        "Duracion": "DuraciÃ³n",
+        "DuraciÃƒÂ³n": "DuraciÃ³n",
+    }
+    return [equivalencias.get(str(valor).strip(), str(valor).strip()) for valor in encabezados]
+
 st.set_page_config(
     page_title=f"Agenda | {MARCA}",
     page_icon="âœ¨",
@@ -288,11 +296,13 @@ def obtener_hoja():
     encabezados = hoja.row_values(1)
     if not encabezados:
         hoja.append_row(COLUMNAS)
-    elif encabezados != COLUMNAS:
+    elif normalizar_encabezados(encabezados) != COLUMNAS:
         raise ValueError(
             "La primera fila de Google Sheets debe contener exactamente: "
             + ", ".join(COLUMNAS)
         )
+    elif encabezados != COLUMNAS:
+        hoja.update("A1:G1", [COLUMNAS])
     return hoja
 
 
@@ -523,4 +533,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
