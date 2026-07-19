@@ -1,4 +1,3 @@
-from base64 import b64encode
 from datetime import date, datetime, time, timedelta
 from html import escape
 from pathlib import Path
@@ -444,33 +443,12 @@ def guardar_cita(hoja, fecha, hora, servicio, duracion, nombre, whatsapp):
     return True
 
 
-def imagen_data_uri(ruta: Path):
-    if not ruta.exists():
-        return None
-
-    mime = "image/png"
-    if ruta.suffix.lower() in {".jpg", ".jpeg"}:
-        mime = "image/jpeg"
-    elif ruta.suffix.lower() == ".webp":
-        mime = "image/webp"
-
-    contenido = b64encode(ruta.read_bytes()).decode("ascii")
-    return f"data:{mime};base64,{contenido}"
-
-
 def render_banner_promociones():
-    banner = imagen_data_uri(PROMO_BANNER_IMAGEN)
-    if not banner:
+    if not PROMO_BANNER_IMAGEN.exists():
+        st.warning("Banner de promociones no encontrado: sube assets/promo-banner.png")
         return
 
-    st.markdown(
-        f"""
-        <div class="monthly-promo-banner">
-            <img src="{banner}" alt="Promociones del mes">
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    st.image(str(PROMO_BANNER_IMAGEN), use_container_width=True)
 
 
 def render_encabezado():
