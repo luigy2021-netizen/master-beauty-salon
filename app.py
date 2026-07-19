@@ -1,3 +1,4 @@
+from base64 import b64encode
 from datetime import date, datetime, time, timedelta
 from html import escape
 from pathlib import Path
@@ -65,6 +66,7 @@ COLUMNAS = [
 
 MARCA = "Master Beauty Salon"
 LOGO = Path(__file__).parent / "assets" / "master-beauty-salon.png"
+PROMO_BANNER_IMAGEN = Path(__file__).parent / "assets" / "promo-banner.png"
 
 
 def normalizar_encabezados(encabezados):
@@ -205,6 +207,21 @@ st.markdown(
             color: #d8d0c0;
         }
 
+        .monthly-promo-banner {
+            margin: -0.35rem 0 1.5rem;
+            border: 1px solid rgba(246, 220, 139, 0.72);
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(10, 10, 10, 0.88);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+        }
+
+        .monthly-promo-banner img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
         .service-card, .promotion-card {
             height: 100%;
             padding: 1rem;
@@ -284,6 +301,7 @@ st.markdown(
             .promo-banner {
                 padding: 1rem;
             }
+
         }
     </style>
     """,
@@ -426,6 +444,35 @@ def guardar_cita(hoja, fecha, hora, servicio, duracion, nombre, whatsapp):
     return True
 
 
+def imagen_data_uri(ruta: Path):
+    if not ruta.exists():
+        return None
+
+    mime = "image/png"
+    if ruta.suffix.lower() in {".jpg", ".jpeg"}:
+        mime = "image/jpeg"
+    elif ruta.suffix.lower() == ".webp":
+        mime = "image/webp"
+
+    contenido = b64encode(ruta.read_bytes()).decode("ascii")
+    return f"data:{mime};base64,{contenido}"
+
+
+def render_banner_promociones():
+    banner = imagen_data_uri(PROMO_BANNER_IMAGEN)
+    if not banner:
+        return
+
+    st.markdown(
+        f"""
+        <div class="monthly-promo-banner">
+            <img src="{banner}" alt="Promociones del mes">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def render_encabezado():
     st.image(str(LOGO), use_container_width=True)
     st.markdown(
@@ -446,6 +493,7 @@ def render_encabezado():
         """,
         unsafe_allow_html=True,
     )
+    render_banner_promociones()
 
 
 def render_catalogo():
