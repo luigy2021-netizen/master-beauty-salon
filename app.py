@@ -74,6 +74,26 @@ def normalizar_encabezados(encabezados):
     }
     return [equivalencias.get(str(valor).strip(), str(valor).strip()) for valor in encabezados]
 
+COLUMNAS = [
+    "Fecha",
+    "Hora",
+    "Servicio",
+    "Duracion",
+    "Nombre",
+    "WhatsApp",
+    "Estado",
+]
+
+
+def normalizar_encabezados(encabezados):
+    equivalencias = {
+        "DuraciÃ³n": "Duracion",
+        "DuraciÃƒÂ³n": "Duracion",
+        "DuraciÃƒÆ’Ã‚Â³n": "Duracion",
+    }
+    return [equivalencias.get(str(valor).strip(), str(valor).strip()) for valor in encabezados]
+
+
 st.set_page_config(
     page_title=f"Agenda | {MARCA}",
     page_icon="âœ¨",
@@ -296,12 +316,11 @@ def obtener_hoja():
     encabezados = hoja.row_values(1)
     if not encabezados:
         hoja.append_row(COLUMNAS)
-    elif normalizar_encabezados(encabezados) != COLUMNAS:
-        raise ValueError(
-            "La primera fila de Google Sheets debe contener exactamente: "
-            + ", ".join(COLUMNAS)
-        )
-    elif encabezados != COLUMNAS:
+    elif normalizar_encabezados(encabezados[: len(COLUMNAS)]) != COLUMNAS:
+        hoja.update("A1:G1", [COLUMNAS])
+        if len(encabezados) > len(COLUMNAS):
+            hoja.batch_clear(["H1:Z1"])
+    elif encabezados[: len(COLUMNAS)] != COLUMNAS:
         hoja.update("A1:G1", [COLUMNAS])
     return hoja
 
@@ -332,6 +351,28 @@ def citas_del_dia(citas: pd.DataFrame, fecha: date):
             )
             duracion = int(cita["DuraciÃ³n"])
         except (TypeError, ValueError):
+            continue
+        resultado.append((inicio, inicio + timedelta(minutes=duracion)))
+    return resultado
+
+
+def citas_del_dia(citas: pd.DataFrame, fecha: date):
+    if citas.empty:
+        return []
+
+    fecha_texto = fecha.strftime("%Y-%m-%d")
+    resultado = []
+    for _, cita in citas.iterrows():
+        if str(cita["Fecha"]).strip() != fecha_texto:
+            continue
+        if str(cita["Estado"]).strip().lower() in {"cancelada", "cancelado"}:
+            continue
+        try:
+            inicio = datetime.combine(
+                fecha, datetime.strptime(str(cita["Hora"]).strip(), "%H:%M").time()
+            )
+            duracion = int(cita["Duracion"])
+        except (KeyError, TypeError, ValueError):
             continue
         resultado.append((inicio, inicio + timedelta(minutes=duracion)))
     return resultado
