@@ -49,7 +49,7 @@ KRONIQ_WHATSAPP = "526563079754"
 KRONIQ_MENSAJE = "Hola, quiero informaciÃ³n sobre una agenda digital para mi negocio."
 
 HORA_APERTURA = time(10, 0)
-HORA_CIERRE = time(17, 30)
+HORA_CIERRE = time(20, 0)
 COMIDA_INICIO = time(14, 0)
 COMIDA_FIN = time(15, 0)
 INTERVALO_MINUTOS = 30
@@ -396,7 +396,7 @@ def citas_del_dia(citas: pd.DataFrame, fecha: date):
 
 
 def horarios_disponibles(fecha: date, duracion: int, citas: pd.DataFrame):
-    if fecha.weekday() in (6, 0):  # domingo y lunes
+    if fecha.weekday() == 6:  # domingo
         return []
 
     apertura = datetime.combine(fecha, HORA_APERTURA)
@@ -506,8 +506,8 @@ def render_reserva(hoja, citas):
     duracion = SERVICIOS[servicio]["duracion"]
     fecha = st.date_input("2. Selecciona fecha", min_value=date.today())
 
-    if fecha.weekday() in (6, 0):
-        st.warning(f"{MARCA} permanece cerrado los domingos y lunes.")
+    if fecha.weekday() == 6:
+        st.warning(f"{MARCA} permanece cerrado los domingos.")
         return
 
     horarios = horarios_disponibles(fecha, duracion, citas)
