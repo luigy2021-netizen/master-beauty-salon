@@ -461,16 +461,6 @@ def render_encabezado():
         '<p class="master-subheading">Reserva tu momento de belleza.</p>',
         unsafe_allow_html=True,
     )
-    st.markdown(
-        f"""
-        <div class="promo-banner">
-            <div class="promo-label">{escape(PROMOCION_PRINCIPAL['etiqueta'])}</div>
-            <h2>{escape(PROMOCION_PRINCIPAL['titulo'])}</h2>
-            <p>{escape(PROMOCION_PRINCIPAL['detalle'])}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
     render_banner_promociones()
 
 
