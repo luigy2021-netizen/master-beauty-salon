@@ -16,16 +16,16 @@ SERVICIOS = {
     },
     "Corte mujer": {
         "duracion": 60,
-        "descripcion": "DiseÃ±o de corte adaptado a tu estilo.",
+        "descripcion": "Diseño de corte adaptado a tu estilo.",
     },
     "Tinte": {
         "duracion": 120,
-        "descripcion": "Servicio de color con atenciÃ³n dedicada.",
+        "descripcion": "Servicio de color con atención dedicada.",
     },
 }
 
 PROMOCION_PRINCIPAL = {
-    "etiqueta": "PromociÃ³n destacada",
+    "etiqueta": "Promoción destacada",
     "titulo": "Renueva tu estilo en Master Beauty Salon",
     "detalle": "Pregunta por nuestros paquetes y promociones disponibles al reservar.",
 }
@@ -40,13 +40,13 @@ PROMOCIONES = [
         "detalle": "Consulta las opciones disponibles para renovar tu color.",
     },
     {
-        "titulo": "Tu prÃ³xima visita",
-        "detalle": "Agenda con anticipaciÃ³n y elige el horario que mÃ¡s te convenga.",
+        "titulo": "Tu próxima visita",
+        "detalle": "Agenda con anticipación y elige el horario que más te convenga.",
     },
 ]
 
 KRONIQ_WHATSAPP = "526563079754"
-KRONIQ_MENSAJE = "Hola, quiero informaciÃ³n sobre una agenda digital para mi negocio."
+KRONIQ_MENSAJE = "Hola, quiero información sobre una agenda digital para mi negocio."
 
 HORA_APERTURA = time(10, 0)
 HORA_CIERRE = time(20, 0)
@@ -57,7 +57,7 @@ COLUMNAS = [
     "Fecha",
     "Hora",
     "Servicio",
-    "DuraciÃ³n",
+    "Duración",
     "Nombre",
     "WhatsApp",
     "Estado",
@@ -70,8 +70,8 @@ PROMO_BANNER_IMAGEN = Path(__file__).parent / "assets" / "promo-banner.png"
 
 def normalizar_encabezados(encabezados):
     equivalencias = {
-        "Duracion": "DuraciÃ³n",
-        "DuraciÃƒÂ³n": "DuraciÃ³n",
+        "Duracion": "Duración",
+        "DuraciÃ³n": "Duración",
     }
     return [equivalencias.get(str(valor).strip(), str(valor).strip()) for valor in encabezados]
 
@@ -88,16 +88,16 @@ COLUMNAS = [
 
 def normalizar_encabezados(encabezados):
     equivalencias = {
+        "Duración": "Duracion",
         "DuraciÃ³n": "Duracion",
         "DuraciÃƒÂ³n": "Duracion",
-        "DuraciÃƒÆ’Ã‚Â³n": "Duracion",
     }
     return [equivalencias.get(str(valor).strip(), str(valor).strip()) for valor in encabezados]
 
 
 st.set_page_config(
     page_title=f"Agenda | {MARCA}",
-    page_icon="âœ¨",
+    page_icon="✨",
     layout="centered",
 )
 
@@ -366,7 +366,7 @@ def citas_del_dia(citas: pd.DataFrame, fecha: date):
             inicio = datetime.combine(
                 fecha, datetime.strptime(str(cita["Hora"]).strip(), "%H:%M").time()
             )
-            duracion = int(cita["DuraciÃ³n"])
+            duracion = int(cita["Duración"])
         except (TypeError, ValueError):
             continue
         resultado.append((inicio, inicio + timedelta(minutes=duracion)))
@@ -474,7 +474,7 @@ def render_catalogo():
                 <div class="service-card">
                     <strong>{escape(nombre)}</strong>
                     <p>{escape(datos['descripcion'])}</p>
-                    <span class="service-time">DuraciÃ³n aproximada: {datos['duracion']} min</span>
+                    <span class="service-time">Duración aproximada: {datos['duracion']} min</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
@@ -519,7 +519,7 @@ def render_reserva(hoja, citas):
         hora = st.selectbox("3. Selecciona hora disponible", horarios)
         nombre = st.text_input("4. Escribe tu nombre")
         whatsapp = st.text_input(
-            "5. Escribe tu WhatsApp (10 dÃ­gitos)", max_chars=10
+            "5. Escribe tu WhatsApp (10 dígitos)", max_chars=10
         )
         confirmar = st.form_submit_button("6. Confirmar cita")
 
@@ -527,7 +527,7 @@ def render_reserva(hoja, citas):
         if not nombre.strip():
             st.error("Escribe tu nombre.")
         elif not (whatsapp.isdigit() and len(whatsapp) == 10):
-            st.error("El WhatsApp debe contener exactamente 10 dÃ­gitos.")
+            st.error("El WhatsApp debe contener exactamente 10 dígitos.")
         else:
             try:
                 guardada = guardar_cita(
@@ -540,7 +540,7 @@ def render_reserva(hoja, citas):
                     )
                 else:
                     st.error(
-                        "Ese horario acaba de ser ocupado. Recarga la pÃ¡gina y elige otro."
+                        "Ese horario acaba de ser ocupado. Recarga la página y elige otro."
                     )
             except Exception as error:
                 st.error("No se pudo guardar la cita. Intenta nuevamente.")
