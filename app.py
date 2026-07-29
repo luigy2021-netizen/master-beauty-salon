@@ -1,5 +1,3 @@
-Copia todo este código y pégalo en `app.py` con **Ctrl + V**:
-
 ```python
 from datetime import date, datetime, time, timedelta
 from html import escape
@@ -61,7 +59,7 @@ COLUMNAS = [
     "Fecha",
     "Hora",
     "Servicio",
-    "Duración",
+    "Duracion",
     "Nombre",
     "WhatsApp",
     "Estado",
@@ -74,40 +72,12 @@ PROMO_BANNER_IMAGEN = Path(__file__).parent / "assets" / "promo-banner.png"
 
 def normalizar_encabezados(encabezados):
     equivalencias = {
-        "Duracion": "Duración",
-        "DuraciÃ³n": "Duración",
-    }
-    return [
-        equivalencias.get(
-            str(valor).strip(),
-            str(valor).strip(),
-        )
-        for valor in encabezados
-    ]
-
-
-COLUMNAS = [
-    "Fecha",
-    "Hora",
-    "Servicio",
-    "Duracion",
-    "Nombre",
-    "WhatsApp",
-    "Estado",
-]
-
-
-def normalizar_encabezados(encabezados):
-    equivalencias = {
         "Duración": "Duracion",
         "DuraciÃ³n": "Duracion",
         "DuraciÃƒÂ³n": "Duracion",
     }
     return [
-        equivalencias.get(
-            str(valor).strip(),
-            str(valor).strip(),
-        )
+        equivalencias.get(str(valor).strip(), str(valor).strip())
         for valor in encabezados
     ]
 
@@ -129,12 +99,7 @@ st.markdown(
 
         .stApp {
             background:
-                radial-gradient(
-                    circle at 50% 0%,
-                    #29200f 0,
-                    #111 30%,
-                    #050505 72%
-                );
+                radial-gradient(circle at 50% 0%, #29200f 0, #111 30%, #050505 72%);
             color: #f7f2e7;
         }
 
@@ -190,11 +155,7 @@ st.markdown(
             border: 1px solid rgba(246, 220, 139, 0.62);
             border-radius: 18px;
             background:
-                linear-gradient(
-                    120deg,
-                    rgba(214, 169, 63, 0.25),
-                    transparent 60%
-                ),
+                linear-gradient(120deg, rgba(214, 169, 63, 0.25), transparent 60%),
                 #111;
             box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
         }
@@ -286,12 +247,7 @@ st.markdown(
         .stButton > button,
         .stFormSubmitButton > button {
             border: 1px solid var(--master-gold);
-            background:
-                linear-gradient(
-                    135deg,
-                    #b88322,
-                    #f0d379
-                );
+            background: linear-gradient(135deg, #b88322, #f0d379);
             color: var(--master-black);
             font-weight: 700;
         }
@@ -346,49 +302,29 @@ st.markdown(
 
 @st.cache_resource
 def obtener_hoja():
-    """
-    Conecta con Google Sheets usando las credenciales
-    de Streamlit Secrets.
-    """
-
     scopes = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
     ]
 
-    credenciales = (
-        ServiceAccountCredentials.from_json_keyfile_dict(
-            dict(st.secrets["gcp_service_account"]),
-            scopes,
-        )
+    credenciales = ServiceAccountCredentials.from_json_keyfile_dict(
+        dict(st.secrets["gcp_service_account"]),
+        scopes,
     )
 
     cliente = gspread.authorize(credenciales)
 
-    spreadsheet_id = st.secrets.get(
-        "spreadsheet_id",
-        "",
-    ).strip()
+    spreadsheet_id = st.secrets.get("spreadsheet_id", "").strip()
 
     if spreadsheet_id:
-        libro = cliente.open_by_key(
-            spreadsheet_id
-        )
+        libro = cliente.open_by_key(spreadsheet_id)
     else:
-        libro = cliente.open(
-            st.secrets["spreadsheet_name"]
-        )
+        libro = cliente.open(st.secrets["spreadsheet_name"])
 
-    nombre_hoja = st.secrets.get(
-        "worksheet_name",
-        "Citas",
-    )
+    nombre_hoja = st.secrets.get("worksheet_name", "Citas")
 
     try:
-        hoja = libro.worksheet(
-            nombre_hoja
-        )
-
+        hoja = libro.worksheet(nombre_hoja)
     except gspread.WorksheetNotFound:
         hoja = libro.add_worksheet(
             title=nombre_hoja,
@@ -400,76 +336,37 @@ def obtener_hoja():
 
     if not encabezados:
         hoja.append_row(COLUMNAS)
-
-    elif (
-        normalizar_encabezados(
-            encabezados[: len(COLUMNAS)]
-        )
-        != COLUMNAS
-    ):
-        hoja.update(
-            "A1:G1",
-            [COLUMNAS],
-        )
-
+    elif normalizar_encabezados(encabezados[: len(COLUMNAS)]) != COLUMNAS:
+        hoja.update("A1:G1", [COLUMNAS])
         if len(encabezados) > len(COLUMNAS):
-            hoja.batch_clear(
-                ["H1:Z1"]
-            )
-
+            hoja.batch_clear(["H1:Z1"])
     elif encabezados[: len(COLUMNAS)] != COLUMNAS:
-        hoja.update(
-            "A1:G1",
-            [COLUMNAS],
-        )
+        hoja.update("A1:G1", [COLUMNAS])
 
     return hoja
 
 
 def leer_citas(hoja):
-    registros = hoja.get_all_records(
-        expected_headers=COLUMNAS
-    )
-
-    return pd.DataFrame(
-        registros,
-        columns=COLUMNAS,
-    )
+    registros = hoja.get_all_records(expected_headers=COLUMNAS)
+    return pd.DataFrame(registros, columns=COLUMNAS)
 
 
-def se_empalman(
-    inicio_a,
-    fin_a,
-    inicio_b,
-    fin_b,
-):
-    return (
-        inicio_a < fin_b
-        and inicio_b < fin_a
-    )
+def se_empalman(inicio_a, fin_a, inicio_b, fin_b):
+    return inicio_a < fin_b and inicio_b < fin_a
 
 
 def citas_del_dia(citas, fecha):
     if citas.empty:
         return []
 
-    fecha_texto = fecha.strftime(
-        "%Y-%m-%d"
-    )
-
+    fecha_texto = fecha.strftime("%Y-%m-%d")
     resultado = []
 
     for _, cita in citas.iterrows():
-        if (
-            str(cita["Fecha"]).strip()
-            != fecha_texto
-        ):
+        if str(cita["Fecha"]).strip() != fecha_texto:
             continue
 
-        if (
-            str(cita["Estado"]).strip().lower()
-            in {"cancelada", "cancelado"}
-        ):
+        if str(cita["Estado"]).strip().lower() in {"cancelada", "cancelado"}:
             continue
 
         try:
@@ -480,127 +377,35 @@ def citas_del_dia(citas, fecha):
                     "%H:%M",
                 ).time(),
             )
-
-            duracion = int(
-                cita["Duración"]
-            )
-
-        except (
-            TypeError,
-            ValueError,
-        ):
+            duracion = int(cita["Duracion"])
+        except (KeyError, TypeError, ValueError):
             continue
 
         resultado.append(
             (
                 inicio,
-                inicio + timedelta(
-                    minutes=duracion
-                ),
+                inicio + timedelta(minutes=duracion),
             )
         )
 
     return resultado
 
 
-def citas_del_dia(citas, fecha):
-    if citas.empty:
-        return []
-
-    fecha_texto = fecha.strftime(
-        "%Y-%m-%d"
-    )
-
-    resultado = []
-
-    for _, cita in citas.iterrows():
-        if (
-            str(cita["Fecha"]).strip()
-            != fecha_texto
-        ):
-            continue
-
-        if (
-            str(cita["Estado"]).strip().lower()
-            in {"cancelada", "cancelado"}
-        ):
-            continue
-
-        try:
-            inicio = datetime.combine(
-                fecha,
-                datetime.strptime(
-                    str(cita["Hora"]).strip(),
-                    "%H:%M",
-                ).time(),
-            )
-
-            duracion = int(
-                cita["Duracion"]
-            )
-
-        except (
-            KeyError,
-            TypeError,
-            ValueError,
-        ):
-            continue
-
-        resultado.append(
-            (
-                inicio,
-                inicio + timedelta(
-                    minutes=duracion
-                ),
-            )
-        )
-
-    return resultado
-
-
-def horarios_disponibles(
-    fecha,
-    duracion,
-    citas,
-):
+def horarios_disponibles(fecha, duracion, citas):
     if fecha.weekday() == 6:
         return []
 
-    apertura = datetime.combine(
-        fecha,
-        HORA_APERTURA,
-    )
-
-    cierre = datetime.combine(
-        fecha,
-        HORA_CIERRE,
-    )
-
-    comida_inicio = datetime.combine(
-        fecha,
-        COMIDA_INICIO,
-    )
-
-    comida_fin = datetime.combine(
-        fecha,
-        COMIDA_FIN,
-    )
-
-    ocupadas = citas_del_dia(
-        citas,
-        fecha,
-    )
+    apertura = datetime.combine(fecha, HORA_APERTURA)
+    cierre = datetime.combine(fecha, HORA_CIERRE)
+    comida_inicio = datetime.combine(fecha, COMIDA_INICIO)
+    comida_fin = datetime.combine(fecha, COMIDA_FIN)
+    ocupadas = citas_del_dia(citas, fecha)
 
     disponibles = []
     inicio = apertura
 
-    while (
-        inicio + timedelta(minutes=duracion)
-        <= cierre
-    ):
-        fin = inicio + timedelta(
-            minutes=duracion
-        )
+    while inicio + timedelta(minutes=duracion) <= cierre:
+        fin = inicio + timedelta(minutes=duracion)
 
         toca_comida = se_empalman(
             inicio,
@@ -616,21 +421,13 @@ def horarios_disponibles(
                 inicio_ocupado,
                 fin_ocupado,
             )
-            for inicio_ocupado, fin_ocupado
-            in ocupadas
+            for inicio_ocupado, fin_ocupado in ocupadas
         )
 
-        if (
-            not toca_comida
-            and not toca_cita
-        ):
-            disponibles.append(
-                inicio.strftime("%H:%M")
-            )
+        if not toca_comida and not toca_cita:
+            disponibles.append(inicio.strftime("%H:%M"))
 
-        inicio += timedelta(
-            minutes=INTERVALO_MINUTOS
-        )
+        inicio += timedelta(minutes=INTERVALO_MINUTOS)
 
     return disponibles
 
@@ -672,13 +469,9 @@ def guardar_cita(
         len(hoja.get_all_values())
     )
 
-    if (
-        ultima_fila[: len(fila)]
-        != [str(valor) for valor in fila]
-    ):
+    if ultima_fila[: len(fila)] != [str(valor) for valor in fila]:
         raise RuntimeError(
-            "La cita se envio a Google Sheets, "
-            "pero no se pudo verificar."
+            "La cita se envio a Google Sheets, pero no se pudo verificar."
         )
 
     return True
@@ -705,20 +498,12 @@ def render_encabezado():
     )
 
     st.markdown(
-        f"""
-        <h1 class="master-heading">
-            Agenda {MARCA}
-        </h1>
-        """,
+        f'<h1 class="master-heading">Agenda {MARCA}</h1>',
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        """
-        <p class="master-subheading">
-            Reserva tu momento de belleza.
-        </p>
-        """,
+        '<p class="master-subheading">Reserva tu momento de belleza.</p>',
         unsafe_allow_html=True,
     )
 
@@ -726,18 +511,11 @@ def render_encabezado():
 
 
 def render_catalogo():
-    st.markdown(
-        "### Nuestros servicios"
-    )
+    st.markdown("### Nuestros servicios")
 
-    columnas = st.columns(
-        len(SERVICIOS)
-    )
+    columnas = st.columns(len(SERVICIOS))
 
-    for columna, (
-        nombre,
-        datos,
-    ) in zip(
+    for columna, (nombre, datos) in zip(
         columnas,
         SERVICIOS.items(),
     ):
@@ -745,17 +523,10 @@ def render_catalogo():
             st.markdown(
                 f"""
                 <div class="service-card">
-                    <strong>
-                        {escape(nombre)}
-                    </strong>
-
-                    <p>
-                        {escape(datos["descripcion"])}
-                    </p>
-
+                    <strong>{escape(nombre)}</strong>
+                    <p>{escape(datos["descripcion"])}</p>
                     <span class="service-time">
-                        Duración aproximada:
-                        {datos["duracion"]} min
+                        Duración aproximada: {datos["duracion"]} min
                     </span>
                 </div>
                 """,
@@ -764,60 +535,41 @@ def render_catalogo():
 
 
 def render_promociones():
-    st.markdown(
-        "### Promociones y novedades"
-    )
+    st.markdown("### Promociones y novedades")
 
     st.caption(
-        "Este espacio puede actualizarse "
-        "cada temporada sin modificar la agenda."
+        "Este espacio puede actualizarse cada temporada "
+        "sin modificar la agenda."
     )
 
     for promocion in PROMOCIONES:
         st.markdown(
             f"""
             <div class="promotion-card">
-                <strong>
-                    {escape(promocion["titulo"])}
-                </strong>
-
-                <p>
-                    {escape(promocion["detalle"])}
-                </p>
+                <strong>{escape(promocion["titulo"])}</strong>
+                <p>{escape(promocion["detalle"])}</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
-
         st.write("")
 
 
-def render_reserva(
-    hoja,
-    citas,
-):
+def render_reserva(hoja, citas):
     st.markdown(
         '<div id="reservar"></div>',
         unsafe_allow_html=True,
     )
 
-    st.markdown(
-        "### Reserva tu cita"
-    )
-
-    st.caption(
-        "Elige tu servicio, fecha "
-        "y horario disponible."
-    )
+    st.markdown("### Reserva tu cita")
+    st.caption("Elige tu servicio, fecha y horario disponible.")
 
     servicio = st.selectbox(
         "1. Selecciona servicio",
         list(SERVICIOS),
     )
 
-    duracion = SERVICIOS[
-        servicio
-    ]["duracion"]
+    duracion = SERVICIOS[servicio]["duracion"]
 
     fecha = st.date_input(
         "2. Selecciona fecha",
@@ -825,10 +577,7 @@ def render_reserva(
     )
 
     if fecha.weekday() == 6:
-        st.warning(
-            f"{MARCA} permanece cerrado "
-            "los domingos."
-        )
+        st.warning(f"{MARCA} permanece cerrado los domingos.")
         return
 
     horarios = horarios_disponibles(
@@ -839,8 +588,7 @@ def render_reserva(
 
     if not horarios:
         st.info(
-            "No hay horarios disponibles para "
-            "ese servicio en esta fecha."
+            "No hay horarios disponibles para ese servicio en esta fecha."
         )
         return
 
@@ -868,17 +616,14 @@ def render_reserva(
 
     if confirmar:
         if not nombre.strip():
-            st.error(
-                "Escribe tu nombre."
-            )
+            st.error("Escribe tu nombre.")
 
         elif not (
             whatsapp.isdigit()
             and len(whatsapp) == 10
         ):
             st.error(
-                "El WhatsApp debe contener "
-                "exactamente 10 dígitos."
+                "El WhatsApp debe contener exactamente 10 dígitos."
             )
 
         else:
@@ -895,12 +640,9 @@ def render_reserva(
 
                 if guardada:
                     st.success(
-                        f"Cita confirmada para "
-                        f"{nombre.strip()} el "
-                        f"{fecha.strftime('%d/%m/%Y')} "
-                        f"a las {hora}."
+                        f"Cita confirmada para {nombre.strip()} el "
+                        f"{fecha.strftime('%d/%m/%Y')} a las {hora}."
                     )
-
                 else:
                     st.error(
                         "Ese horario acaba de ser ocupado. "
@@ -909,16 +651,15 @@ def render_reserva(
 
             except Exception as error:
                 st.error(
-                    "No se pudo guardar la cita. "
-                    "Intenta nuevamente."
+                    "No se pudo guardar la cita. Intenta nuevamente."
                 )
                 st.exception(error)
 
 
 def render_kroniq():
     enlace = (
-        f"https://wa.me/{KRONIQ_WHATSAPP}"
-        f"?text={quote_plus(KRONIQ_MENSAJE)}"
+        f"https://wa.me/{KRONIQ_WHATSAPP}?text="
+        f"{quote_plus(KRONIQ_MENSAJE)}"
     )
 
     st.markdown(
@@ -928,12 +669,9 @@ def render_kroniq():
                 Agenda digital desarrollada por
                 <strong>Kroniq</strong>
             </div>
-
             <div>
-                Convierte tus citas en una
-                experiencia profesional.
+                Convierte tus citas en una experiencia profesional.
             </div>
-
             <a
                 class="kroniq-button"
                 href="{escape(enlace)}"
@@ -988,5 +726,3 @@ def main():
 if __name__ == "__main__":
     main()
 ```
-
-Después pulsa **Commit changes** dos veces.
