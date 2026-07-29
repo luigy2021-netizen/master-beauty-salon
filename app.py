@@ -1,8 +1,10 @@
+Copia todo este código y pégalo en `app.py` con **Ctrl + V**:
+
+```python
 from datetime import date, datetime, time, timedelta
 from html import escape
 from pathlib import Path
 from urllib.parse import quote_plus
-import time as time_module
 
 import gspread
 import pandas as pd
@@ -25,6 +27,12 @@ SERVICIOS = {
     },
 }
 
+PROMOCION_PRINCIPAL = {
+    "etiqueta": "Promoción destacada",
+    "titulo": "Renueva tu estilo en Master Beauty Salon",
+    "detalle": "Pregunta por nuestros paquetes y promociones disponibles al reservar.",
+}
+
 PROMOCIONES = [
     {
         "titulo": "Experiencia Master",
@@ -41,9 +49,7 @@ PROMOCIONES = [
 ]
 
 KRONIQ_WHATSAPP = "526563079754"
-KRONIQ_MENSAJE = (
-    "Hola, quiero información sobre una agenda digital para mi negocio."
-)
+KRONIQ_MENSAJE = "Hola, quiero información sobre una agenda digital para mi negocio."
 
 HORA_APERTURA = time(10, 0)
 HORA_CIERRE = time(20, 0)
@@ -55,25 +61,40 @@ COLUMNAS = [
     "Fecha",
     "Hora",
     "Servicio",
-    "Duracion",
+    "Duración",
     "Nombre",
     "WhatsApp",
     "Estado",
 ]
 
 MARCA = "Master Beauty Salon"
+LOGO = Path(__file__).parent / "assets" / "master-beauty-salon.png"
+PROMO_BANNER_IMAGEN = Path(__file__).parent / "assets" / "promo-banner.png"
 
-LOGO = (
-    Path(__file__).parent
-    / "assets"
-    / "master-beauty-salon.png"
-)
 
-PROMO_BANNER_IMAGEN = (
-    Path(__file__).parent
-    / "assets"
-    / "promo-banner.png"
-)
+def normalizar_encabezados(encabezados):
+    equivalencias = {
+        "Duracion": "Duración",
+        "DuraciÃ³n": "Duración",
+    }
+    return [
+        equivalencias.get(
+            str(valor).strip(),
+            str(valor).strip(),
+        )
+        for valor in encabezados
+    ]
+
+
+COLUMNAS = [
+    "Fecha",
+    "Hora",
+    "Servicio",
+    "Duracion",
+    "Nombre",
+    "WhatsApp",
+    "Estado",
+]
 
 
 def normalizar_encabezados(encabezados):
@@ -82,7 +103,6 @@ def normalizar_encabezados(encabezados):
         "DuraciÃ³n": "Duracion",
         "DuraciÃƒÂ³n": "Duracion",
     }
-
     return [
         equivalencias.get(
             str(valor).strip(),
@@ -97,7 +117,6 @@ st.set_page_config(
     page_icon="✨",
     layout="centered",
 )
-
 
 st.markdown(
     """
@@ -163,6 +182,74 @@ st.markdown(
             letter-spacing: 0.04em;
         }
 
+        .promo-banner {
+            position: relative;
+            overflow: hidden;
+            margin: 0 0 1.4rem;
+            padding: 1.25rem 1.35rem;
+            border: 1px solid rgba(246, 220, 139, 0.62);
+            border-radius: 18px;
+            background:
+                linear-gradient(
+                    120deg,
+                    rgba(214, 169, 63, 0.25),
+                    transparent 60%
+                ),
+                #111;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        }
+
+        .promo-banner::after {
+            content: "M";
+            position: absolute;
+            right: 1rem;
+            top: -1.1rem;
+            color: rgba(246, 220, 139, 0.09);
+            font-family: Georgia, serif;
+            font-size: 8rem;
+            line-height: 1;
+        }
+
+        .promo-label {
+            color: var(--master-gold-light);
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        .promo-banner h2 {
+            position: relative;
+            z-index: 1;
+            margin: 0.35rem 0;
+            color: #fff4d4;
+            font-family: Georgia, serif;
+            font-size: 1.4rem;
+        }
+
+        .promo-banner p {
+            position: relative;
+            z-index: 1;
+            margin: 0;
+            max-width: 620px;
+            color: #d8d0c0;
+        }
+
+        .monthly-promo-banner {
+            margin: -0.35rem 0 1.5rem;
+            border: 1px solid rgba(246, 220, 139, 0.72);
+            border-radius: 18px;
+            overflow: hidden;
+            background: rgba(10, 10, 10, 0.88);
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28);
+        }
+
+        .monthly-promo-banner img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
         .service-card,
         .promotion-card {
             height: 100%;
@@ -199,11 +286,12 @@ st.markdown(
         .stButton > button,
         .stFormSubmitButton > button {
             border: 1px solid var(--master-gold);
-            background: linear-gradient(
-                135deg,
-                #b88322,
-                #f0d379
-            );
+            background:
+                linear-gradient(
+                    135deg,
+                    #b88322,
+                    #f0d379
+                );
             color: var(--master-black);
             font-weight: 700;
         }
@@ -245,6 +333,10 @@ st.markdown(
             [data-testid="stAppViewBlockContainer"] {
                 padding: 0.7rem 0.8rem 2rem;
             }
+
+            .promo-banner {
+                padding: 1rem;
+            }
         }
     </style>
     """,
@@ -252,43 +344,11 @@ st.markdown(
 )
 
 
-def ejecutar_google(operacion, *args, **kwargs):
-    """
-    Reintenta automáticamente las solicitudes cuando
-    Google Sheets responde con un error temporal.
-    """
-
-    for intento in range(4):
-        try:
-            return operacion(*args, **kwargs)
-
-        except gspread.exceptions.APIError as error:
-            codigo = getattr(
-                error.response,
-                "status_code",
-                None,
-            )
-
-            error_temporal = codigo in (
-                429,
-                500,
-                502,
-                503,
-                504,
-            )
-
-            if not error_temporal or intento == 3:
-                raise
-
-            segundos = 2 ** intento
-            time_module.sleep(segundos)
-
-
 @st.cache_resource
 def obtener_hoja():
     """
     Conecta con Google Sheets usando las credenciales
-    guardadas en Streamlit Secrets.
+    de Streamlit Secrets.
     """
 
     scopes = [
@@ -311,14 +371,12 @@ def obtener_hoja():
     ).strip()
 
     if spreadsheet_id:
-        libro = ejecutar_google(
-            cliente.open_by_key,
-            spreadsheet_id,
+        libro = cliente.open_by_key(
+            spreadsheet_id
         )
     else:
-        libro = ejecutar_google(
-            cliente.open,
-            st.secrets["spreadsheet_name"],
+        libro = cliente.open(
+            st.secrets["spreadsheet_name"]
         )
 
     nombre_hoja = st.secrets.get(
@@ -327,29 +385,21 @@ def obtener_hoja():
     )
 
     try:
-        hoja = ejecutar_google(
-            libro.worksheet,
-            nombre_hoja,
+        hoja = libro.worksheet(
+            nombre_hoja
         )
 
     except gspread.WorksheetNotFound:
-        hoja = ejecutar_google(
-            libro.add_worksheet,
+        hoja = libro.add_worksheet(
             title=nombre_hoja,
             rows=1000,
             cols=7,
         )
 
-    encabezados = ejecutar_google(
-        hoja.row_values,
-        1,
-    )
+    encabezados = hoja.row_values(1)
 
     if not encabezados:
-        ejecutar_google(
-            hoja.append_row,
-            COLUMNAS,
-        )
+        hoja.append_row(COLUMNAS)
 
     elif (
         normalizar_encabezados(
@@ -357,21 +407,18 @@ def obtener_hoja():
         )
         != COLUMNAS
     ):
-        ejecutar_google(
-            hoja.update,
+        hoja.update(
             "A1:G1",
             [COLUMNAS],
         )
 
         if len(encabezados) > len(COLUMNAS):
-            ejecutar_google(
-                hoja.batch_clear,
-                ["H1:Z1"],
+            hoja.batch_clear(
+                ["H1:Z1"]
             )
 
     elif encabezados[: len(COLUMNAS)] != COLUMNAS:
-        ejecutar_google(
-            hoja.update,
+        hoja.update(
             "A1:G1",
             [COLUMNAS],
         )
@@ -380,9 +427,8 @@ def obtener_hoja():
 
 
 def leer_citas(hoja):
-    registros = ejecutar_google(
-        hoja.get_all_records,
-        expected_headers=COLUMNAS,
+    registros = hoja.get_all_records(
+        expected_headers=COLUMNAS
     )
 
     return pd.DataFrame(
@@ -407,17 +453,23 @@ def citas_del_dia(citas, fecha):
     if citas.empty:
         return []
 
-    fecha_texto = fecha.strftime("%Y-%m-%d")
+    fecha_texto = fecha.strftime(
+        "%Y-%m-%d"
+    )
+
     resultado = []
 
     for _, cita in citas.iterrows():
-        if str(cita["Fecha"]).strip() != fecha_texto:
+        if (
+            str(cita["Fecha"]).strip()
+            != fecha_texto
+        ):
             continue
 
-        if str(cita["Estado"]).strip().lower() in {
-            "cancelada",
-            "cancelado",
-        }:
+        if (
+            str(cita["Estado"]).strip().lower()
+            in {"cancelada", "cancelado"}
+        ):
             continue
 
         try:
@@ -429,7 +481,63 @@ def citas_del_dia(citas, fecha):
                 ).time(),
             )
 
-            duracion = int(cita["Duracion"])
+            duracion = int(
+                cita["Duración"]
+            )
+
+        except (
+            TypeError,
+            ValueError,
+        ):
+            continue
+
+        resultado.append(
+            (
+                inicio,
+                inicio + timedelta(
+                    minutes=duracion
+                ),
+            )
+        )
+
+    return resultado
+
+
+def citas_del_dia(citas, fecha):
+    if citas.empty:
+        return []
+
+    fecha_texto = fecha.strftime(
+        "%Y-%m-%d"
+    )
+
+    resultado = []
+
+    for _, cita in citas.iterrows():
+        if (
+            str(cita["Fecha"]).strip()
+            != fecha_texto
+        ):
+            continue
+
+        if (
+            str(cita["Estado"]).strip().lower()
+            in {"cancelada", "cancelado"}
+        ):
+            continue
+
+        try:
+            inicio = datetime.combine(
+                fecha,
+                datetime.strptime(
+                    str(cita["Hora"]).strip(),
+                    "%H:%M",
+                ).time(),
+            )
+
+            duracion = int(
+                cita["Duracion"]
+            )
 
         except (
             KeyError,
@@ -441,7 +549,9 @@ def citas_del_dia(citas, fecha):
         resultado.append(
             (
                 inicio,
-                inicio + timedelta(minutes=duracion),
+                inicio + timedelta(
+                    minutes=duracion
+                ),
             )
         )
 
@@ -510,7 +620,10 @@ def horarios_disponibles(
             in ocupadas
         )
 
-        if not toca_comida and not toca_cita:
+        if (
+            not toca_comida
+            and not toca_cita
+        ):
             disponibles.append(
                 inicio.strftime("%H:%M")
             )
@@ -550,19 +663,13 @@ def guardar_cita(
         "Confirmada",
     ]
 
-    ejecutar_google(
-        hoja.append_row,
+    hoja.append_row(
         fila,
         value_input_option="RAW",
     )
 
-    valores = ejecutar_google(
-        hoja.get_all_values
-    )
-
-    ultima_fila = ejecutar_google(
-        hoja.row_values,
-        len(valores),
+    ultima_fila = hoja.row_values(
+        len(hoja.get_all_values())
     )
 
     if (
@@ -570,8 +677,8 @@ def guardar_cita(
         != [str(valor) for valor in fila]
     ):
         raise RuntimeError(
-            "La cita llegó a Google Sheets, "
-            "pero no fue posible verificarla."
+            "La cita se envio a Google Sheets, "
+            "pero no se pudo verificar."
         )
 
     return True
@@ -580,7 +687,8 @@ def guardar_cita(
 def render_banner_promociones():
     if not PROMO_BANNER_IMAGEN.exists():
         st.warning(
-            "Banner de promociones no encontrado."
+            "Banner de promociones no encontrado: "
+            "sube assets/promo-banner.png"
         )
         return
 
@@ -618,7 +726,9 @@ def render_encabezado():
 
 
 def render_catalogo():
-    st.markdown("### Nuestros servicios")
+    st.markdown(
+        "### Nuestros servicios"
+    )
 
     columnas = st.columns(
         len(SERVICIOS)
@@ -691,7 +801,9 @@ def render_reserva(
         unsafe_allow_html=True,
     )
 
-    st.markdown("### Reserva tu cita")
+    st.markdown(
+        "### Reserva tu cita"
+    )
 
     st.caption(
         "Elige tu servicio, fecha "
@@ -756,4 +868,125 @@ def render_reserva(
 
     if confirmar:
         if not nombre.strip():
-            s
+            st.error(
+                "Escribe tu nombre."
+            )
+
+        elif not (
+            whatsapp.isdigit()
+            and len(whatsapp) == 10
+        ):
+            st.error(
+                "El WhatsApp debe contener "
+                "exactamente 10 dígitos."
+            )
+
+        else:
+            try:
+                guardada = guardar_cita(
+                    hoja,
+                    fecha,
+                    hora,
+                    servicio,
+                    duracion,
+                    nombre,
+                    whatsapp,
+                )
+
+                if guardada:
+                    st.success(
+                        f"Cita confirmada para "
+                        f"{nombre.strip()} el "
+                        f"{fecha.strftime('%d/%m/%Y')} "
+                        f"a las {hora}."
+                    )
+
+                else:
+                    st.error(
+                        "Ese horario acaba de ser ocupado. "
+                        "Recarga la página y elige otro."
+                    )
+
+            except Exception as error:
+                st.error(
+                    "No se pudo guardar la cita. "
+                    "Intenta nuevamente."
+                )
+                st.exception(error)
+
+
+def render_kroniq():
+    enlace = (
+        f"https://wa.me/{KRONIQ_WHATSAPP}"
+        f"?text={quote_plus(KRONIQ_MENSAJE)}"
+    )
+
+    st.markdown(
+        f"""
+        <div class="kroniq-footer">
+            <div>
+                Agenda digital desarrollada por
+                <strong>Kroniq</strong>
+            </div>
+
+            <div>
+                Convierte tus citas en una
+                experiencia profesional.
+            </div>
+
+            <a
+                class="kroniq-button"
+                href="{escape(enlace)}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Quiero una agenda para mi negocio
+            </a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def main():
+    render_encabezado()
+
+    try:
+        hoja = obtener_hoja()
+        citas = leer_citas(hoja)
+
+    except Exception as error:
+        st.error(
+            "No fue posible conectar con Google Sheets. "
+            "Revisa los Secrets y permisos."
+        )
+        st.exception(error)
+        render_kroniq()
+        st.stop()
+
+    reservar, promociones = st.tabs(
+        [
+            "Reservar cita",
+            "Promociones",
+        ]
+    )
+
+    with reservar:
+        render_catalogo()
+        st.divider()
+        render_reserva(
+            hoja,
+            citas,
+        )
+
+    with promociones:
+        render_promociones()
+
+    render_kroniq()
+
+
+if __name__ == "__main__":
+    main()
+```
+
+Después pulsa **Commit changes** dos veces.
