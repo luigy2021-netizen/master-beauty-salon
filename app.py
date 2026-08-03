@@ -79,9 +79,63 @@ st.markdown(
     .service-time { display: block; margin-top: 0.7rem; color: #a99d86; font-size: 0.78rem; }
     div[data-testid="stForm"] { border-color: rgba(214, 169, 63, 0.5); background: rgba(17, 17, 17, 0.85); }
     .stButton > button, .stFormSubmitButton > button { border: 1px solid var(--gold); background: linear-gradient(135deg, #b88322, #f0d379); color: var(--ink); font-weight: 700; }
-    .kroniq-footer { margin-top: 2.8rem; padding: 1.15rem; border-top: 1px solid rgba(214, 169, 63, 0.32); color: #aaa08e; text-align: center; }
-    .kroniq-footer strong { color: var(--gold-light); }
-    .kroniq-button { display: inline-block; margin-top: 0.8rem; padding: 0.62rem 1rem; border: 1px solid var(--gold); border-radius: 10px; color: #f4d982 !important; font-weight: 700; text-decoration: none !important; }
+    .kroniq-footer {
+        position: relative;
+        overflow: hidden;
+        margin-top: 3rem;
+        padding: 2rem 1.4rem;
+        border: 1px solid rgba(214, 169, 63, 0.58);
+        border-radius: 18px;
+        background:
+            radial-gradient(circle at 100% 0%, rgba(214, 169, 63, 0.2), transparent 42%),
+            linear-gradient(145deg, #17130c, #080808 65%);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+        text-align: center;
+    }
+    .kroniq-badge {
+        display: inline-block;
+        padding: 0.3rem 0.72rem;
+        border: 1px solid rgba(214, 169, 63, 0.55);
+        border-radius: 999px;
+        color: var(--gold-light);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+    }
+    .kroniq-title {
+        margin: 0.85rem 0 0.45rem;
+        color: #fff8e7;
+        font-family: Georgia, serif;
+        font-size: clamp(1.35rem, 4vw, 1.9rem);
+    }
+    .kroniq-copy {
+        max-width: 560px;
+        margin: 0 auto;
+        color: #cfc7b5;
+        line-height: 1.55;
+    }
+    .kroniq-benefits {
+        margin-top: 0.9rem;
+        color: #e6d8b8;
+        font-size: 0.88rem;
+    }
+    .kroniq-button {
+        display: inline-block;
+        margin-top: 1.2rem;
+        padding: 0.78rem 1.3rem;
+        border: 1px solid #f0cf71;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #b88322, #f0d379);
+        box-shadow: 0 8px 24px rgba(214, 169, 63, 0.2);
+        color: #090909 !important;
+        font-weight: 800;
+        text-decoration: none !important;
+    }
+    .kroniq-signature {
+        margin-top: 1rem;
+        color: #817765;
+        font-size: 0.72rem;
+    }
     @media (max-width: 640px) { [data-testid="stAppViewBlockContainer"] { padding: 0.7rem 0.8rem 2rem; } }
     </style>
     """,
@@ -277,7 +331,24 @@ def mostrar_promociones():
 def mostrar_kroniq():
     enlace = f"https://wa.me/{KRONIQ_WHATSAPP}?text={quote_plus(KRONIQ_MENSAJE)}"
     st.markdown(
-        f'<div class="kroniq-footer"><div>Agenda digital desarrollada por <strong>Kroniq</strong></div><div>Convierte tus citas en una experiencia profesional.</div><a class="kroniq-button" href="{escape(enlace)}" target="_blank" rel="noopener noreferrer">Quiero una agenda para mi negocio</a></div>',
+        f"""
+        <div class="kroniq-footer">
+            <div class="kroniq-badge">KRONIQ BOOKING</div>
+            <div class="kroniq-title">Haz crecer tu negocio con una agenda digital</div>
+            <div class="kroniq-copy">
+                Recibe reservaciones las 24 horas, organiza tus horarios y brinda
+                a tus clientes una experiencia profesional.
+            </div>
+            <div class="kroniq-benefits">
+                Agenda personalizada &nbsp;&#10022;&nbsp; Disponible 24/7
+                &nbsp;&#10022;&nbsp; Contacto por WhatsApp
+            </div>
+            <a class="kroniq-button" href="{escape(enlace)}" target="_blank" rel="noopener noreferrer">
+                &#128172;&nbsp; Quiero mi agenda digital
+            </a>
+            <div class="kroniq-signature">Desarrollado por Kroniq</div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
