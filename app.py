@@ -18,19 +18,19 @@ SERVICIO_DIA_COMPLETO = "Mechas"
 SERVICIOS = {
     "Mechas": {
         "duracion": 480,
-        "descripcion": "Servicio de mechas con atenciÃ³n dedicada durante todo el dÃ­a.",
+        "descripcion": "Servicio de mechas con atenci\u00f3n dedicada durante todo el d\u00eda.",
     },
     "Tintes": {
         "duracion": 180,
-        "descripcion": "Servicio de color con atenciÃ³n dedicada.",
+        "descripcion": "Servicio de color con atenci\u00f3n dedicada.",
     },
     "Extensiones": {
         "duracion": 360,
-        "descripcion": "AplicaciÃ³n de extensiones con acabado profesional.",
+        "descripcion": "Aplicaci\u00f3n de extensiones con acabado profesional.",
     },
     "Peinado y maquillaje": {
         "duracion": 240,
-        "descripcion": "Peinado y maquillaje para una ocasiÃ³n especial.",
+        "descripcion": "Peinado y maquillaje para una ocasi\u00f3n especial.",
     },
     "Tratamiento capilar": {
         "duracion": 300,
@@ -38,14 +38,14 @@ SERVICIOS = {
     },
     "Cortes": {
         "duracion": 60,
-        "descripcion": "DiseÃ±o de corte adaptado a tu estilo.",
+        "descripcion": "Dise\u00f1o de corte adaptado a tu estilo.",
     },
 }
 
 PROMOCIONES = [
     ("Experiencia Master", "Combina tus servicios favoritos en una sola visita."),
     ("Color y cuidado", "Consulta las opciones disponibles para renovar tu color."),
-    ("Tu prÃ³xima visita", "Agenda con anticipaciÃ³n y elige el horario que mÃ¡s te convenga."),
+    ("Tu pr\u00f3xima visita", "Agenda con anticipaci\u00f3n y elige el horario que m\u00e1s te convenga."),
 ]
 
 COLUMNAS = ["Fecha", "Hora", "Servicio", "Duracion", "Nombre", "WhatsApp", "Estado"]
@@ -57,10 +57,10 @@ COMIDA_FIN = time(15, 0)
 INTERVALO = 30
 
 KRONIQ_WHATSAPP = "526563079754"
-KRONIQ_MENSAJE = "Hola, quiero informaciÃ³n sobre una agenda digital para mi negocio."
+KRONIQ_MENSAJE = "Hola, quiero informaci\u00f3n sobre una agenda digital para mi negocio."
 
 
-st.set_page_config(page_title=f"Agenda | {MARCA}", page_icon="âœ¨", layout="centered")
+st.set_page_config(page_title=f"Agenda | {MARCA}", page_icon="\u2728", layout="centered")
 
 st.markdown(
     """
@@ -157,11 +157,11 @@ def horarios_disponibles(fecha, servicio, duracion, citas):
 
     citas_activas = citas_activas_del_dia(citas, fecha)
 
-    # Mechas ocupa el dÃ­a completo y solo puede reservarse en un dÃ­a vacÃ­o.
+    # Mechas ocupa el dia completo y solo puede reservarse en un dia vacio.
     if servicio == SERVICIO_DIA_COMPLETO:
         return [HORA_APERTURA.strftime("%H:%M")] if not citas_activas else []
 
-    # NingÃºn otro servicio puede reservarse si ya hay Mechas ese dÃ­a.
+    # Ningun otro servicio puede reservarse si ya hay Mechas ese dia.
     if dia_bloqueado_por_mechas(citas, fecha):
         return []
 
@@ -216,9 +216,9 @@ def mostrar_servicios():
         servicios_fila = list(SERVICIOS.items())[fila_inicio : fila_inicio + 3]
         for columna, (nombre, datos) in zip(columnas, servicios_fila):
             with columna:
-                nota = " Â· Bloquea todo el dÃ­a" if nombre == SERVICIO_DIA_COMPLETO else ""
+                nota = " \u00b7 Bloquea todo el d\u00eda" if nombre == SERVICIO_DIA_COMPLETO else ""
                 st.markdown(
-                    f'<div class="service-card"><strong>{escape(nombre)}</strong><p>{escape(datos["descripcion"])}</p><span class="service-time">DuraciÃ³n aproximada: {texto_duracion(datos["duracion"])}{nota}</span></div>',
+                    f'<div class="service-card"><strong>{escape(nombre)}</strong><p>{escape(datos["descripcion"])}</p><span class="service-time">Duraci\u00f3n aproximada: {texto_duracion(datos["duracion"])}{nota}</span></div>',
                     unsafe_allow_html=True,
                 )
 
@@ -240,28 +240,28 @@ def mostrar_reserva(hoja, citas):
         return
 
     if servicio == SERVICIO_DIA_COMPLETO:
-        st.info("El servicio de Mechas ocupa y bloquea todo el dÃ­a.")
+        st.info("El servicio de Mechas ocupa y bloquea todo el d\u00eda.")
 
     with st.form("formulario_cita", clear_on_submit=True):
         hora = st.selectbox("3. Selecciona hora disponible", horarios)
         nombre = st.text_input("4. Escribe tu nombre")
-        whatsapp = st.text_input("5. Escribe tu WhatsApp (10 dÃ­gitos)", max_chars=10)
+        whatsapp = st.text_input("5. Escribe tu WhatsApp (10 d\u00edgitos)", max_chars=10)
         confirmar = st.form_submit_button("6. Confirmar cita")
 
     if confirmar:
         if hoja is None:
-            st.error("El registro de citas estÃ¡ temporalmente fuera de servicio.")
+            st.error("El registro de citas est\u00e1 temporalmente fuera de servicio.")
         elif not nombre.strip():
             st.error("Escribe tu nombre.")
         elif not (whatsapp.isdigit() and len(whatsapp) == 10):
-            st.error("El WhatsApp debe contener exactamente 10 dÃ­gitos.")
+            st.error("El WhatsApp debe contener exactamente 10 d\u00edgitos.")
         else:
             try:
                 guardada = guardar_cita(hoja, fecha, hora, servicio, duracion, nombre, whatsapp)
                 if guardada:
                     st.success(f"Cita confirmada para {nombre.strip()} el {fecha.strftime('%d/%m/%Y')} a las {hora}.")
                 else:
-                    st.error("Ese dÃ­a u horario acaba de ser ocupado. Recarga la pÃ¡gina y elige otro.")
+                    st.error("Ese d\u00eda u horario acaba de ser ocupado. Recarga la p\u00e1gina y elige otro.")
             except Exception:
                 st.error("No fue posible guardar la cita. Espera unos segundos e intenta nuevamente.")
 
@@ -290,7 +290,7 @@ def main():
         hoja = obtener_hoja()
         citas = leer_citas(hoja)
     except Exception:
-        st.warning("La agenda estÃ¡ visible, pero Google Sheets no respondiÃ³. Las reservaciones se reactivarÃ¡n cuando vuelva la conexiÃ³n.")
+        st.warning("La agenda est\u00e1 visible, pero Google Sheets no respondi\u00f3. Las reservaciones se reactivar\u00e1n cuando vuelva la conexi\u00f3n.")
 
     reservar, promociones = st.tabs(["Reservar cita", "Promociones"])
     with reservar:
